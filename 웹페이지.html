@@ -1,38 +1,80 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>출고 요청 시스템</title>
     <script src="https://unpkg.com/vue@2.6.14"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body>
-    <div id="app">
+<body class="bg-gray-100 p-10">
+    <div id="app" class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-lg">
         <!-- 파일 업로드 -->
-        <h2>[파일 요청]</h2>
-        <a href="양식.csv" download>양식.csv</a>
-        <p>파일을 업로드하세요:</p>
-        <input type="file" @change="uploadFile">
+        <h2 class="text-lg font-bold mb-2">📂 파일 요청</h2>
+        <a href="양식.csv" download class="text-blue-600 underline">양식.csv 다운로드</a>
+        <p class="mt-2 text-gray-600">파일을 업로드하세요:</p>
+        <input type="file" @change="uploadFile" class="mt-2 p-2 border rounded-md w-full">
+
+        <!-- 수기 요청 -->
+        <h2 class="text-lg font-bold mt-6 mb-2">📝 수기 요청</h2>
         
-        <!-- 수기 입력 -->
-        <h2>[수기 요청]</h2>
-        <table border="1">
-            <tr>
-                <th>요청일자</th><th>요청자</th><th>부서명</th><th>수취인</th>
-                <th>연락처</th><th>주소</th><th>상품명</th><th>수량</th><th>배송메시지</th>
-            </tr>
-            <tr>
-                <td><input type="date" v-model="form.requestDate"></td>
-                <td><input type="text" v-model="form.requester"></td>
-                <td><input type="text" v-model="form.department"></td>
-                <td><input type="text" v-model="form.recipient"></td>
-                <td><input type="text" v-model="form.phone"></td>
-                <td><input type="text" v-model="form.address"></td>
-                <td><input type="text" v-model="form.product"></td>
-                <td><input type="number" v-model="form.quantity"></td>
-                <td><input type="text" v-model="form.message"></td>
-            </tr>
+<!-- 수취인 정보 입력 -->
+<div class="grid grid-cols-2 gap-4">
+    <input type="date" v-model="form.requestDate" class="col-span-2 p-2 border rounded-md">
+    <input type="text" v-model="form.requester" placeholder="요청자" class="p-2 border rounded-md">
+    <input type="text" v-model="form.department" placeholder="부서명" class="p-2 border rounded-md">
+</div>
+
+<div class="grid grid-cols-2 gap-4 mt-4">
+    <input type="text" v-model="form.recipient" placeholder="수취인" class="p-2 border rounded-md">
+    <input type="text" v-model="form.phone" placeholder="연락처" class="p-2 border rounded-md">
+    <input type="text" v-model="form.address" placeholder="주소" class="col-span-2 p-2 border rounded-md">
+    <input type="text" v-model="form.message" placeholder="배송 메시지" class="col-span-2 p-2 border rounded-md">
+</div>
+
+
+        <!-- 상품 정보 테이블 -->
+        <h3 class="text-md font-bold mt-6">📦 상품 목록</h3>
+        <table class="w-full border mt-2">
+            <thead>
+                <tr class="bg-gray-200">
+                    <th class="border p-2">상품명</th>
+                    <th class="border p-2">수량</th>
+                    <th class="border p-2">배송 메시지</th>
+                    <th class="border p-2">삭제</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="(item, index) in form.products" :key="index">
+                    <td class="border p-2">
+                        <input type="text" v-model="item.product" placeholder="상품명" class="p-2 border rounded-md w-full">
+                    </td>
+                    <td class="border p-2">
+                        <input type="number" v-model="item.quantity" placeholder="수량" class="p-2 border rounded-md w-full">
+                    </td>
+                    <td class="border p-2">
+                        <input type="text" v-model="item.message" placeholder="배송 메시지" class="p-2 border rounded-md w-full">
+                    </td>
+                    <td class="border p-2 text-center">
+                        <button @click="removeProduct(index)" class="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600">
+                            X
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
         </table>
 
-        <button @click="submitRequest">요청</button>
+        <!-- 상품 추가 버튼 -->
+        <button @click="addProduct"
+            class="mt-4 bg-green-500 text-white p-2 rounded-md hover:bg-green-600 w-full">
+            + 상품 추가
+        </button>
+
+        <!-- 요청하기 버튼 -->
+        <button @click="submitRequest"
+            class="mt-4 w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600">
+            요청하기
+        </button>
     </div>
 
     <script>
@@ -46,45 +88,25 @@
                     recipient: '',
                     phone: '',
                     address: '',
-                    product: '',
-                    quantity: '',
-                    message: ''
+                    message: '',
+                    products: [
+                        { product: '', quantity: 1, message: '' }  // message 추가!
+                    ]
                 }
             },
             methods: {
-                async uploadFile(event) {
-                    const file = event.target.files[0];
-                    if (!file) return;
-
-                    let formData = new FormData();
-                    formData.append("file", file);
-
-                    try {
-                        const response = await fetch("YOUR_GOOGLE_APPS_SCRIPT_URL", {
-                            method: "POST",
-                            body: formData
-                        });
-
-                        const result = await response.json();
-                        alert(result.message);
-                    } catch (error) {
-                        console.error("파일 업로드 실패:", error);
-                    }
+                uploadFile(event) {
+                    alert("파일 업로드 기능 구현 필요!");
                 },
-
-                async submitRequest() {
-                    try {
-                        const response = await fetch("YOUR_GOOGLE_APPS_SCRIPT_URL", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify(this.form)
-                        });
-
-                        const result = await response.json();
-                        alert(result.message);
-                    } catch (error) {
-                        console.error("출고 요청 실패:", error);
-                    }
+                addProduct() {
+                    this.form.products.push({ product: '', quantity: 1, message: '' });
+                },
+                removeProduct(index) {
+                    this.form.products.splice(index, 1);
+                },
+                submitRequest() {
+                    console.log("출고 요청 데이터:", this.form);
+                    alert("출고 요청 완료!");
                 }
             }
         });
